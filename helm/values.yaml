@@ -1,0 +1,38 @@
+replicaCount: 2
+
+image:
+  repository: your-registry/inventory-service
+  pullPolicy: IfNotPresent
+  tag: "1.4.2"
+
+service:
+  type: ClusterIP
+  port: 8002
+
+env:
+  REDIS_URL: "redis://redis:6379/0"
+  REDIS_POOL_MAX_SIZE: "50"
+  REDIS_POOL_TIMEOUT: "5"
+  LOW_STOCK_THRESHOLD: "30"
+  CACHE_REFRESH_INTERVAL: "30"
+  CACHE_TTL: "30"
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+serviceMonitor:
+  enabled: true
+  release: prometheus
+  interval: 15s
+  scrapeTimeout: 10s
