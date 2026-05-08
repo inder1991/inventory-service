@@ -20,7 +20,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # =============================================================================
-# Inventory Service v1.4.2
+# Inventory Service v1.4.3
+#
+# Changelog v1.4.3:
+#   - Documentation-only changelog refresh (no behavioral change).
 #
 # Changelog v1.4.2 (deployed 2026-02-18T14:30:00Z):
 #   - Added Redis caching layer for stock lookups (perf improvement)
@@ -38,7 +41,7 @@ from sqlalchemy.orm import sessionmaker
 # =============================================================================
 
 SERVICE_NAME = "inventory-service"
-SERVICE_VERSION = "1.4.2"
+SERVICE_VERSION = "1.4.3"
 DEPLOY_SHA = "a3f7c2e"  # git short sha of the deploy
 DEPLOY_TIME = "2026-02-18T14:30:00Z"
 
