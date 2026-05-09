@@ -70,3 +70,5 @@ Environment variables:
 
 Once running, visit: http://localhost:8002/docs
 # inventory-service
+
+<!-- smoke test trigger 2026-05-09T09:35:44Z -->
