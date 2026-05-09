@@ -72,3 +72,4 @@ Once running, visit: http://localhost:8002/docs
 # inventory-service
 
 <!-- smoke test trigger 2026-05-09T09:35:44Z -->
+trigger fresh webhook 2026-05-09T09:42:24Z
