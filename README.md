@@ -73,3 +73,4 @@ Once running, visit: http://localhost:8002/docs
 <!-- s19.smoke.2 trigger 2026-05-09T11:28:23Z -->
 trigger fresh webhook for new pod 2026-05-09T11:29:32Z
 v2-pod-test 2026-05-09T11:32:58Z
+post-pool-fix 2026-05-09T11:35:09Z
