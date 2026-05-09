@@ -71,3 +71,4 @@ Environment variables:
 Once running, visit: http://localhost:8002/docs
 # inventory-service
 <!-- s19.smoke.2 trigger 2026-05-09T11:28:23Z -->
+trigger fresh webhook for new pod 2026-05-09T11:29:32Z
