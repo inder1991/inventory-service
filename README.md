@@ -70,3 +70,5 @@ Environment variables:
 
 Once running, visit: http://localhost:8002/docs
 # inventory-service
+
+<!-- s19-smoke6 trigger 1778330658 -->
