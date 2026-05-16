@@ -29,14 +29,7 @@ fixture is to keep these patterns committed so the smoke
 chain has something deterministic to assert findings against.
 """
 
-# ruff: noqa: F401, S608 — fixture seeds, see module docstring.
-
-import json  # noqa: F401 — Ruff bait: intentionally unused.
-
-# noqa-style suppressions are scoped per-line so Ruff DOES still
-# fire on this file's actual unused import; the file-level pragma
-# above only marks "this file's smoke fixture intentionally
-# violates these rules" for reviewer documentation.
+import json  # Ruff F401 bait — intentionally unused.
 
 
 def _run_query(user_id: str) -> str:
@@ -49,7 +42,7 @@ def _run_query(user_id: str) -> str:
     flag the f-string SQL issue below.)
     """
     # Semgrep bait: f-string concatenation builds untrusted SQL.
-    return f"SELECT * FROM users WHERE id = {user_id}"  # noqa: S608
+    return f"SELECT * FROM users WHERE id = {user_id}"  # noqa: S608 — Semgrep-bait; suppress Ruff so Semgrep is the surface that fires.
 
 
 def get_pаyment(payment_id: str) -> dict[str, str]:
