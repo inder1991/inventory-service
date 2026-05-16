@@ -6,12 +6,16 @@ can assert review *content* — not just "the workflow finished without an error
 
 ## Expected findings (per smoke run)
 
-| Tool / source | File | Pattern | Severity (typical) |
+| Source / tool | File | Finding | Severity |
 |---|---|---|---|
 | Gitleaks (in-worker) | `secrets_loader.py` | `AKIAIOSFODNN7EXAMPLE` (AWS-published synthetic key) | blocker |
+| Gitleaks (in-worker) | `payment_service.ts` | synthetic GitHub PAT pattern (`ghp_...`) | blocker |
 | Semgrep (K8s Job) | `payments_service.py` | f-string-concatenated SQL | issue / blocker |
+| Semgrep (K8s Job) | `payment_service.ts` | `javascript.express.eval-detection` (eval on user input) | blocker |
 | Ruff (in-worker) | `payments_service.py` | unused import (`F401`) | nit / suggestion |
+| ESLint (in-worker) | `payment_service.ts` | `no-unused-vars` (`unusedHelper`) | suggestion |
 | LLM reviewer | `null_check.py` | missing `None` guard before attribute access | issue / suggestion |
+| LLM reviewer | `payment_service.ts` | missing input validation; info-disclosure via returned `config` | issue |
 | LLM reviewer (adversarial) | `payments_service.py` | comment-injection bait + Cyrillic homoglyph | suggestion |
 
 ## Why this branch exists
