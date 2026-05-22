@@ -1,0 +1,44 @@
+# Codemaster configuration for inventory-service.
+#
+# Enables the policy engine + ships ADR-0001 / Sprint-10 per-glob
+# team rules. Authored 2026-05-22 to exercise the policy-engine
+# end-to-end during smoke verification (S26.X-smoke-policy-and-
+# truncation-coverage).
+
+schema_version: 1
+enabled: true
+severity_min: nit
+
+# Sprint-9 always-on tools (eslint / ruff / gitleaks) run regardless;
+# this list adds enabled extras when we want them. Empty = default.
+enabled_tools: []
+
+# ADR-0001 / S10.0.1: per-glob natural-language team rules. These
+# become semi-trust policy rules in the LLM prompt; matching files
+# get the corresponding instructions inlined under
+# <knowledge trust="semi"> tags.
+path_instructions:
+  - path: "src/**/*.py"
+    instructions: >
+      Python files MUST NOT contain hardcoded credentials, API keys,
+      AWS access tokens, GitHub PATs, or database passwords. Load
+      secrets from environment variables (in dev) or HashiCorp Vault
+      (in production) at runtime. f-string interpolation of user input
+      into SQL queries is SQL injection — use parameterised statements
+      (`?` placeholders + a tuple of params) or an ORM. Avoid `eval()`
+      and `exec()` on any caller-supplied data — these enable RCE.
+  - path: "src/**/*.ts"
+    instructions: >
+      TypeScript files MUST validate untrusted input before
+      processing. `eval()` of attacker-controlled request bodies is
+      a blocker; use `JSON.parse` with an explicit schema validator
+      (e.g. zod, io-ts) instead. Never commit secrets to source —
+      including GitHub Personal Access Tokens used for testing.
+
+# Sprint 25 / A-7 — policy file discovery patterns. Empty defaults
+# pick up CLAUDE.md, AGENTS.md, STANDARDS.md, README.md, etc. We
+# leave file_patterns empty here so the A-1 defaults apply and pick
+# up the repo's CLAUDE.md authored alongside this config.
+knowledge:
+  enabled: true
+  file_patterns: []
