@@ -1,44 +1,57 @@
-# Codemaster configuration for inventory-service.
+# Smoke fixture — exercises the .codemaster.yaml repo-config feature
+# (merged in PR #187 / repo-config-wiring). Every block below is asserted
+# by tests/smoke/_config_assertions.py against the live review output.
 #
-# Enables the policy engine + ships ADR-0001 / Sprint-10 per-glob
-# team rules. Authored 2026-05-22 to exercise the policy-engine
-# end-to-end during smoke verification (S26.X-smoke-policy-and-
-# truncation-coverage).
+# Sub-features demonstrated:
+#   * path_filters       — file selection (last-match-wins). The
+#                          `generated/` exclude means
+#                          `generated/schema_pb2.py` (seeded in the PR
+#                          diff, full of bait) is NOT reviewed → 0
+#                          findings on it.
+#   * path_instructions  — per-glob team rule. The Django rule makes the
+#                          reviewer flag `models.py`'s `.save()`-without-
+#                          `.full_clean()` — a finding that does NOT fire
+#                          without this config.
+#   * knowledge.file_patterns — discovers `TEAM_GUIDELINES.md` (not an
+#                          A-1 default pattern) so the policy engine
+#                          extracts + can cite its rule.
+#   * knowledge.confluence.include_labels — narrows Confluence retrieval
+#                          to the platform label the seeded SEP corpus is
+#                          tagged with (asserted flag-gated, alongside the
+#                          existing confluence citation check).
+#   * config-change notice — because THIS file is in the PR diff, the
+#                          workflow emits a category=config advisory.
 
 schema_version: 1
 enabled: true
 severity_min: nit
 
-# Sprint-9 always-on tools (eslint / ruff / gitleaks) run regardless;
-# this list adds enabled extras when we want them. Empty = default.
-enabled_tools: []
+# Last-match-wins: review everything, then carve out generated code.
+path_filters:
+  - "**"
+  - "!**/generated/**"
 
-# ADR-0001 / S10.0.1: per-glob natural-language team rules. These
-# become semi-trust policy rules in the LLM prompt; matching files
-# get the corresponding instructions inlined under
-# <knowledge trust="semi"> tags.
+# Per-glob team review rules. The Django rule is the bait for
+# path-instructions coverage: models.py calls .save() with no preceding
+# .full_clean(), which only surfaces because of this rule.
 path_instructions:
-  - path: "src/**/*.py"
-    instructions: >
-      Python files MUST NOT contain hardcoded credentials, API keys,
-      AWS access tokens, GitHub PATs, or database passwords. Load
-      secrets from environment variables (in dev) or HashiCorp Vault
-      (in production) at runtime. f-string interpolation of user input
-      into SQL queries is SQL injection — use parameterised statements
-      (`?` placeholders + a tuple of params) or an ORM. Avoid `eval()`
-      and `exec()` on any caller-supplied data — these enable RCE.
-  - path: "src/**/*.ts"
-    instructions: >
-      TypeScript files MUST validate untrusted input before
-      processing. `eval()` of attacker-controlled request bodies is
-      a blocker; use `JSON.parse` with an explicit schema validator
-      (e.g. zod, io-ts) instead. Never commit secrets to source —
-      including GitHub Personal Access Tokens used for testing.
+  - path: "**/*.py"
+    instructions: |
+      Enforce this team's Django conventions:
+        - Every `model.save()` call MUST be preceded by a
+          `model.full_clean()` call so validation runs before the
+          write. Flag any `.save()` without a preceding
+          `.full_clean()`.
 
-# Sprint 25 / A-7 — policy file discovery patterns. Empty defaults
-# pick up CLAUDE.md, AGENTS.md, STANDARDS.md, README.md, etc. We
-# leave file_patterns empty here so the A-1 defaults apply and pick
-# up the repo's CLAUDE.md authored alongside this config.
 knowledge:
   enabled: true
-  file_patterns: []
+  # Additive to the 15 A-1 default guideline-file patterns. Lets the
+  # policy engine discover the repo's team-guidelines doc.
+  file_patterns:
+    - "TEAM_GUIDELINES.md"
+  confluence:
+    # Narrow Confluence retrieval to the platform-exposed label the
+    # seeded SEP corpus is tagged with. include_labels can only narrow
+    # the platform ceiling, never elevate.
+    include_labels:
+      - "security"
