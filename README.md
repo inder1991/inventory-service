@@ -1,74 +1,82 @@
-# inventory-service
+# `seeded-issues` — deterministic smoke fixture branch
 
-Race-condition safe inventory management
+These fixture files seed the smoke test repo (`inder1991/inventory-service`)
+with **deterministically-detectable issues** so `tests/smoke/test_pr_to_review_happy_path.py`
+can assert review *content* — not just "the workflow finished without an error."
 
-## 🚀 Quick Start
+**Design principle (2026-05-31 SDET dedup):** one seeded bait ↔ one
+distinct product feature. No two baits should satisfy the same
+assertion. Secret detection lives ONLY in `secrets_loader.py` (the
+duplicate `ghp_...` PAT was removed from `payment_service.ts`). Keep the
+canonical finding set at ~10, each demonstrating a different capability
+(static analysis × tools, LLM reasoning, secrets, policy engine,
+path_filters, path_instructions, config-change notice, Confluence).
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
+## Expected findings (per smoke run)
 
-# Run locally  
-python src/main.py
+| Source / tool | File | Finding | Severity |
+|---|---|---|---|
+| Gitleaks (in-worker) | `secrets_loader.py` | `AKIAIOSFODNN7EXAMPLE` (AWS-published synthetic key) | blocker |
+| Gitleaks (in-worker) | `payment_service.ts` | synthetic GitHub PAT pattern (`ghp_...`) | blocker |
+| Semgrep (K8s Job) | `payments_service.py` | f-string-concatenated SQL | issue / blocker |
+| Semgrep (K8s Job) | `payment_service.ts` | `javascript.express.eval-detection` (eval on user input) | blocker |
+| Ruff (in-worker) | `payments_service.py` | unused import (`F401`) | nit / suggestion |
+| ESLint (in-worker) | `payment_service.ts` | `no-unused-vars` (`unusedHelper`) | suggestion |
+| LLM reviewer | `null_check.py` | missing `None` guard before attribute access | issue / suggestion |
+| LLM reviewer | `payment_service.ts` | missing input validation; info-disclosure via returned `config` | issue |
+| LLM reviewer (adversarial) | `payments_service.py` | comment-injection bait + Cyrillic homoglyph | suggestion |
+| path_instructions (`.codemaster.yaml`) | `models.py` | `.save()` without `.full_clean()` (Django rule) | issue / suggestion |
+| knowledge.file_patterns (`.codemaster.yaml`) | `TEAM_GUIDELINES.md` | policy engine extracts the timeout rule | — |
+| config-change notice | `.codemaster.yaml` | `category=config` advisory (PR edits the config) | suggestion |
+| path_filters (negative) | `generated/schema_pb2.py` | **ZERO** findings — excluded by `!**/generated/**` | — |
 
-# Server starts on http://localhost:8002
+## `.codemaster.yaml` repo-config coverage (PR #187)
+
+The seeded `.codemaster.yaml` is the source of truth for the repo-config
+feature's smoke coverage. It is tracked in this repo via a scoped
+`.gitignore` negation (`!tests/smoke/fixtures/seeded-issues/.codemaster.yaml`);
+the repo-root `.codemaster.yaml` ignore still applies everywhere else.
+
+Inline assertions in `tests/smoke/test_pr_to_review_happy_path.py`
+(`cfg.*` links):
+
+* **cfg.notice** (deterministic) — editing `.codemaster.yaml` in the PR
+  produces a `category=config` notice finding.
+* **cfg.path_filters** (deterministic, negative) — `generated/schema_pb2.py`
+  gets ZERO findings (excluded before chunking by `!**/generated/**`).
+* **cfg.path_instructions** (LLM, ±1 tolerance) — `models.py` is flagged
+  for the Django `full_clean()` rule injected via `path_instructions`.
+* `knowledge.file_patterns` discovers `TEAM_GUIDELINES.md`; confluence
+  `include_labels` narrowing rides the existing flag-gated
+  `_confluence_assertions` path.
+
+No `workflow.patched` flag is needed: `repo-config-wiring` is True for new
+workflow executions, so a fresh smoke run exercises the feature
+automatically.
+
+Semgrep (k.semgrep) remains flag-gated (`CODEMASTER_SMOKE_FLAG_SEMGREP_V1=1`)
+because it needs the K8s Job runner — Phase C.
+
+## Why this branch exists
+
+Pre-fixture smokes used arbitrary `synchronize` events on whatever PR the operator had open. Diffs were trivial; there was no expected-finding-set to assert against. With this committed branch + the test App's auto-PR path (S15.X-github-test-app-harness), every smoke run produces the same set of categories — the smoke becomes a deterministic regression test for review *content*.
+
+## Synthetic-key allowlist note
+
+`AKIAIOSFODNN7EXAMPLE` is the AWS-published documented test pattern. GitHub secret-scanning push-protection allowlists it explicitly as a known-test-credential, so push to a public test repo does not trigger the protection. Do NOT replace with a real-shaped key — that would block the push.
+
+## Bootstrap
+
+```
+python scripts/bootstrap_smoke_fixture_branch.py --repo inder1991/inventory-service
 ```
 
-## 🐳 Docker
+The script is idempotent — re-running over an existing `seeded-issues` branch fast-forwards from the local fixture content. It does NOT delete the branch on subsequent runs (operators rebase manually if `main` shifts under it).
 
-```bash
-# Build image
-docker build -t inventory-service:v1 .
+## Per-run hygiene
 
-# Run container
-docker run -p 8002:8002 inventory-service:v1
-```
+`tests/smoke/_harness.py::GitHubTestApp.cleanup_pr` closes the PR + deletes the *per-run* head branch after a successful smoke run. The `seeded-issues` fixture branch persists; only the `main`-derived per-run branch is removed.
 
-## ☸️ Kubernetes Deployment
+## Adversarial corpus delta
 
-```bash
-# Deploy with Helm
-helm install inventory-service ./helm \
-  --namespace ecommerce \
-  --create-namespace
-
-# Port forward to test
-kubectl port-forward svc/inventory-service 8002:8002 -n ecommerce
-```
-
-## 📁 Project Structure
-
-```
-inventory-service/
-├── src/
-│   ├── main.py          # Application entry point
-│   ├── models/          # Data models
-│   ├── routes/          # API routes
-│   └── utils/           # Utilities
-├── tests/               # Test files
-├── helm/                # Helm chart
-├── Dockerfile           # Container definition
-└── requirements.txt     # Python dependencies
-```
-
-## 🔧 Configuration
-
-Environment variables:
-- `DATABASE_URL` - Database connection string (if applicable)
-- `PORT` - Service port (default: 8002)
-- Other service-specific configs
-
-## 🛠️ Tech Stack
-
-- Python 3.11
-- FastAPI
-- SQLAlchemy (if database)
-- PostgreSQL (if database)
-- Pydantic
-
-## 📊 API Documentation
-
-Once running, visit: http://localhost:8002/docs
-# inventory-service
-
-<!-- s19-smoke6 trigger 1778330658 -->
+The comment-injection in `payments_service.py` is also recorded as `tests/corpora/prompt_injection/0057-fixture-comment-injection.yaml` so the adversarial-corpus detection gate (≥ 95%) covers the same pattern that lives in the fixture.
